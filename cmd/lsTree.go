@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/sha1"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -40,6 +41,11 @@ var lsTreeCmd = &cobra.Command{
 }
 
 func lsTree() error {
+	// Output format:
+	// 040000 dir1 <tree_sha_1>
+	// 040000 dir2 <tree_sha_2>
+	// 100644 file1 <blob_sha_1>
+
 	hash, err := object.HashFromString(objectHash)
 	if err != nil {
 		return fmt.Errorf("hash object: %w %v", err, objectHash)
@@ -53,13 +59,15 @@ func lsTree() error {
 	r := bufio.NewReader(bytes.NewReader(obj.Content()))
 
 	for {
-		_, err := r.ReadString(' ')
+		mode, err := r.ReadString(' ')
 		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
 			return fmt.Errorf("read string: %w", err)
 		}
+
+		mode = mode[:len(mode)-1]
 
 		name, err := r.ReadString('\000')
 		if err != nil {
@@ -68,12 +76,15 @@ func lsTree() error {
 
 		name = name[:len(name)-1]
 
-		_, err = r.Discard(sha1.Size)
+		sha := make([]byte, sha1.Size)
+		_, err = r.Read(sha)
 		if err != nil {
-			return fmt.Errorf("discard: %w", err)
+			return fmt.Errorf("read sha: %w", err)
 		}
 
-		fmt.Printf("%s\n", name)
+		hashStr := hex.EncodeToString(sha[:])
+
+		fmt.Printf("%s %s %s\n", mode, hashStr, name)
 	}
 	return nil
 }

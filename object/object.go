@@ -10,60 +10,39 @@ import (
 	"strconv"
 )
 
-type Object interface {
-	Size() int64
+type GitObject interface {
+	String() string
 	Content() []byte
+	Size() int64
 }
 
-type Blob struct {
+type Object[T ObjectType] struct {
 	content []byte
 	size    int64
 }
 
-func NewBlob(content []byte, size int64) *Blob {
-	return &Blob{
-		content,
-		size,
-	}
+type ObjectType interface {
+	Commit | Tree | Blob | Tag
 }
 
-func (b *Blob) String() string {
+type Commit string
+type Tree string
+type Blob string
+type Tag string
+
+func (b *Object[T]) String() string {
 	return string(b.content)
 }
 
-func (b *Blob) Size() int64 {
+func (b *Object[T]) Size() int64 {
 	return b.size
 }
 
-func (b *Blob) Content() []byte {
+func (b *Object[T]) Content() []byte {
 	return b.content
 }
 
-type Tree struct {
-	content []byte
-	size    int64
-}
-
-func NewTree(content []byte, size int64) *Tree {
-	return &Tree{
-		content,
-		size,
-	}
-}
-
-func (t *Tree) String() string {
-	return string(t.content)
-}
-
-func (t *Tree) Size() int64 {
-	return t.size
-}
-
-func (t *Tree) Content() []byte {
-	return t.content
-}
-
-func LoadByHash(h Hash) (Object, error) {
+func LoadByHash(h Hash) (GitObject, error) {
 	name := h.String()
 
 	path := filepath.Join(".git", "objects", name[:2], name[2:])
@@ -83,7 +62,7 @@ func LoadByHash(h Hash) (Object, error) {
 	return LoadFile(file)
 }
 
-func LoadFile(r io.Reader) (Object, error) {
+func LoadFile(r io.Reader) (GitObject, error) {
 	zr, err := zlib.NewReader(r)
 	if err != nil {
 		return nil, fmt.Errorf("new zlib reader %w", err)
@@ -103,12 +82,16 @@ func LoadFile(r io.Reader) (Object, error) {
 
 	switch typ {
 	case "blob":
-		return NewBlob(content, int64(len(content))), nil
+		return &Object[Blob]{content, int64(len(content))}, nil
 	case "tree":
-		return NewTree(content, int64(len(content))), nil
+		return &Object[Tree]{content, int64(len(content))}, nil
 	default:
 		return nil, fmt.Errorf("unknown object type %s", typ)
 	}
+}
+
+func NewBlob(content []byte, i int64) Object[Blob] {
+	panic("unimplemented")
 }
 
 func parseObject(r io.Reader) (string, []byte, error) {
