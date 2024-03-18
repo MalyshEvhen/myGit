@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 
 	"github.com/mygit/object"
 	"github.com/spf13/cobra"
@@ -41,11 +42,6 @@ var lsTreeCmd = &cobra.Command{
 }
 
 func lsTree() error {
-	// Output format:
-	// 040000 dir1 <tree_sha_1>
-	// 040000 dir2 <tree_sha_2>
-	// 100644 file1 <blob_sha_1>
-
 	hash, err := object.HashFromString(objectHash)
 	if err != nil {
 		return fmt.Errorf("hash object: %w %v", err, objectHash)
@@ -68,6 +64,10 @@ func lsTree() error {
 		}
 
 		mode = mode[:len(mode)-1]
+		numMode, err := strconv.Atoi(mode)
+		if err != nil {
+			return fmt.Errorf("atoi mode: %w", err)
+		}
 
 		name, err := r.ReadString('\000')
 		if err != nil {
@@ -84,7 +84,23 @@ func lsTree() error {
 
 		hashStr := hex.EncodeToString(sha[:])
 
-		fmt.Printf("%s %s %s\n", mode, hashStr, name)
+		nestedObjHash, err := object.HashFromString(hashStr)
+		if err != nil {
+			return fmt.Errorf("hash from string: %w", err)
+		}
+		nestedObj, err := object.LoadByHash(nestedObjHash)
+		if err != nil {
+			return fmt.Errorf("load object: %w", err)
+		}
+
+		switch typ := nestedObj.(type) {
+		case *object.Object[object.Blob]:
+			fmt.Printf("%06d blob %s %s\n", numMode, hashStr, name)
+		case *object.Object[object.Tree]:
+			fmt.Printf("%06d tree %s %s\n", numMode, hashStr, name)
+		default:
+			return fmt.Errorf("unknown object type: %T", typ)
+		}
 	}
 	return nil
 }
