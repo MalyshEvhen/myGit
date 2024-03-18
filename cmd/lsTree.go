@@ -28,10 +28,6 @@ var lsTreeCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		objectHash = args[0]
-		if !nameOnly {
-			fmt.Print("mode must be given without --name-only, and we don`t support it.")
-			os.Exit(1)
-		}
 
 		err := lsTree()
 		if err != nil {
@@ -76,30 +72,38 @@ func lsTree() error {
 
 		name = name[:len(name)-1]
 
-		sha := make([]byte, sha1.Size)
-		_, err = r.Read(sha)
-		if err != nil {
-			return fmt.Errorf("read sha: %w", err)
-		}
+		if !nameOnly {
+			sha := make([]byte, sha1.Size)
+			_, err = r.Read(sha)
+			if err != nil {
+				return fmt.Errorf("read sha: %w", err)
+			}
 
-		hashStr := hex.EncodeToString(sha[:])
+			hashStr := hex.EncodeToString(sha[:])
 
-		nestedObjHash, err := object.HashFromString(hashStr)
-		if err != nil {
-			return fmt.Errorf("hash from string: %w", err)
-		}
-		nestedObj, err := object.LoadByHash(nestedObjHash)
-		if err != nil {
-			return fmt.Errorf("load object: %w", err)
-		}
+			nestedObjHash, err := object.HashFromString(hashStr)
+			if err != nil {
+				return fmt.Errorf("hash from string: %w", err)
+			}
+			nestedObj, err := object.LoadByHash(nestedObjHash)
+			if err != nil {
+				return fmt.Errorf("load object: %w", err)
+			}
 
-		switch typ := nestedObj.(type) {
-		case *object.Object[object.Blob]:
-			fmt.Printf("%06d blob %s %s\n", numMode, hashStr, name)
-		case *object.Object[object.Tree]:
-			fmt.Printf("%06d tree %s %s\n", numMode, hashStr, name)
-		default:
-			return fmt.Errorf("unknown object type: %T", typ)
+			switch typ := nestedObj.(type) {
+			case *object.Object[object.Blob]:
+				fmt.Printf("%06d blob %s    %s\n", numMode, hashStr, name)
+			case *object.Object[object.Tree]:
+				fmt.Printf("%06d tree %s    %s\n", numMode, hashStr, name)
+			default:
+				return fmt.Errorf("unknown object type: %T", typ)
+			}
+		} else {
+			_, err := r.Discard(sha1.Size)
+			if err != nil {
+				return fmt.Errorf("discard sha: %w", err)
+			}
+			fmt.Println(name)
 		}
 	}
 	return nil
