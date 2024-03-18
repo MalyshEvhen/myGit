@@ -42,18 +42,18 @@ func catFile() error {
 		return fmt.Errorf("hash object: %w, %v", err, objectHash)
 	}
 
-	typ, content, err := object.LoadByHash(hash)
+	obj, err := object.LoadByHash(hash)
 	if err != nil {
 		return fmt.Errorf("load object: %w", err)
 	}
 
-	switch typ {
-	case "blob":
-		fmt.Printf("%s", content)
-	case "tree":
-		fmt.Printf("%s", content)
+	switch obj := obj.(type) {
+	case *object.Blob:
+		fmt.Printf("%s", obj.Content())
+	case *object.Tree:
+		fmt.Printf("%s", obj.Content())
 	default:
-		return fmt.Errorf("unsupported object type %s", typ)
+		return fmt.Errorf("unsupported object type %T", obj)
 	}
 
 	return nil

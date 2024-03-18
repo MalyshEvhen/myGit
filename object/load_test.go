@@ -60,7 +60,7 @@ func TestLoadByHashNew(t *testing.T) {
 	t.Run("non-existent hash", func(t *testing.T) {
 		hash := Hash{0x00, 0x01, 0x02, 0x03}
 
-		_, _, err := LoadByHash(hash)
+		_, err := LoadByHash(hash)
 
 		assert.Error(t, err)
 	})
@@ -68,7 +68,7 @@ func TestLoadByHashNew(t *testing.T) {
 	t.Run("io error", func(t *testing.T) {
 		hash := Hash{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 
-		_, _, err := LoadByHash(hash)
+		_, err := LoadByHash(hash)
 
 		assert.Error(t, err)
 	})
@@ -76,7 +76,7 @@ func TestLoadByHashNew(t *testing.T) {
 	t.Run("invalid zlib", func(t *testing.T) {
 		hash := Hash{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef}
 
-		_, _, err := LoadByHash(hash)
+		_, err := LoadByHash(hash)
 
 		assert.Error(t, err)
 	})
@@ -84,7 +84,7 @@ func TestLoadByHashNew(t *testing.T) {
 	t.Run("invalid object", func(t *testing.T) {
 		hash := Hash{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef}
 
-		_, _, err := LoadByHash(hash)
+		_, err := LoadByHash(hash)
 
 		assert.Error(t, err)
 	})
@@ -95,7 +95,7 @@ func TestLoadFileNew(t *testing.T) {
 	t.Run("empty hash", func(t *testing.T) {
 		hash := Hash{}
 
-		_, _, err := LoadByHash(hash)
+		_, err := LoadByHash(hash)
 
 		assert.Error(t, err)
 	})
@@ -106,7 +106,7 @@ func TestLoadFileNew(t *testing.T) {
 		zw.Write([]byte("xinvalid"))
 		zw.Close()
 
-		_, _, err := LoadFile(&buf)
+		_, err := LoadFile(&buf)
 
 		assert.Error(t, err)
 	})
@@ -117,7 +117,7 @@ func TestLoadFileNew(t *testing.T) {
 		zw.Write([]byte("blob 5Hello"))
 		zw.Close()
 
-		_, _, err := LoadFile(&buf)
+		_, err := LoadFile(&buf)
 
 		assert.Error(t, err)
 	})
@@ -128,7 +128,7 @@ func TestLoadFileNew(t *testing.T) {
 		zw.Write([]byte("invalid 5Hello"))
 		zw.Close()
 
-		_, _, err := LoadFile(&buf)
+		_, err := LoadFile(&buf)
 
 		assert.Error(t, err)
 	})
@@ -139,7 +139,7 @@ func TestLoadFileNew(t *testing.T) {
 		zw.Write([]byte("blob -5Hello"))
 		zw.Close()
 
-		_, _, err := LoadFile(&buf)
+		_, err := LoadFile(&buf)
 
 		assert.Error(t, err)
 	})
@@ -147,7 +147,7 @@ func TestLoadFileNew(t *testing.T) {
 	t.Run("io error", func(t *testing.T) {
 		r := &errorReader{}
 
-		_, _, err := LoadFile(r)
+		_, err := LoadFile(r)
 
 		assert.Error(t, err)
 	})
@@ -155,7 +155,7 @@ func TestLoadFileNew(t *testing.T) {
 	t.Run("invalid zlib", func(t *testing.T) {
 		r := bytes.NewReader([]byte("invalid"))
 
-		_, _, err := LoadFile(r)
+		_, err := LoadFile(r)
 
 		assert.Error(t, err)
 	})
@@ -166,7 +166,7 @@ func TestLoadFileNew(t *testing.T) {
 		zw.Write([]byte("invalid"))
 		zw.Close()
 
-		_, _, err := LoadFile(&buf)
+		_, err := LoadFile(&buf)
 
 		assert.Error(t, err)
 	})

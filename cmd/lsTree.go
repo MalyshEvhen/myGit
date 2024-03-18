@@ -45,15 +45,12 @@ func lsTree() error {
 		return fmt.Errorf("hash object: %w %v", err, objectHash)
 	}
 
-	typ, content, err := object.LoadByHash(hash)
+	obj, err := object.LoadByHash(hash)
 	if err != nil {
 		return fmt.Errorf("load object: %w", err)
 	}
 
-	if typ != "tree" {
-		return fmt.Errorf("type must be tree, but got %v", typ)
-	}
-	r := bufio.NewReader(bytes.NewReader(content))
+	r := bufio.NewReader(bytes.NewReader(obj.Content()))
 
 	for {
 		_, err := r.ReadString(' ')
