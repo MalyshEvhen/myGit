@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/sha1"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -51,62 +50,115 @@ func lsTree() error {
 	r := bufio.NewReader(bytes.NewReader(obj.Content()))
 
 	for {
-		mode, err := r.ReadString(' ')
+		mode, err := readFileMode(r)
 		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("read string: %w", err)
+			return err
 		}
 
-		mode = mode[:len(mode)-1]
-		numMode, err := strconv.Atoi(mode)
+		name, err := readName(r)
 		if err != nil {
-			return fmt.Errorf("atoi mode: %w", err)
+			return err
 		}
-
-		name, err := r.ReadString('\000')
-		if err != nil {
-			return fmt.Errorf("read string: %w", err)
-		}
-
-		name = name[:len(name)-1]
 
 		if !nameOnly {
-			sha := make([]byte, sha1.Size)
-			_, err = r.Read(sha)
+			sha, err := readObjSha(r)
 			if err != nil {
-				return fmt.Errorf("read sha: %w", err)
+				return err
 			}
 
-			hashStr := hex.EncodeToString(sha[:])
-
-			nestedObjHash, err := object.HashFromString(hashStr)
+			nestedObj, err := readNestedObject(sha)
 			if err != nil {
-				return fmt.Errorf("hash from string: %w", err)
-			}
-			nestedObj, err := object.LoadByHash(nestedObjHash)
-			if err != nil {
-				return fmt.Errorf("load object: %w", err)
+				return err
 			}
 
-			switch typ := nestedObj.(type) {
-			case *object.Object[object.Blob]:
-				fmt.Printf("%06d blob %s    %s\n", numMode, hashStr, name)
-			case *object.Object[object.Tree]:
-				fmt.Printf("%06d tree %s    %s\n", numMode, hashStr, name)
-			default:
-				return fmt.Errorf("unknown object type: %T", typ)
-			}
+			entry := NewTreeEntry(nestedObj, name, mode, sha)
+			fmt.Printf("%s", entry)
 		} else {
-			_, err := r.Discard(sha1.Size)
-			if err != nil {
+			if _, err := r.Discard(sha1.Size); err != nil {
 				return fmt.Errorf("discard sha: %w", err)
 			}
 			fmt.Println(name)
 		}
 	}
 	return nil
+}
+
+func readNestedObject(sha []byte) (object.GitObject, error) {
+	hash := object.Hash(sha[:])
+	obj, err := object.LoadByHash(hash)
+	if err != nil {
+		return nil, fmt.Errorf("load object: %w", err)
+	}
+
+	return obj, nil
+}
+
+func readObjSha(r *bufio.Reader) ([]byte, error) {
+	sha := make([]byte, sha1.Size)
+	_, err := r.Read(sha)
+	if err != nil {
+		return nil, fmt.Errorf("read sha: %w", err)
+	}
+	return sha, nil
+}
+
+func readName(r *bufio.Reader) (string, error) {
+	name, err := r.ReadString('\000')
+	if err != nil {
+		return "", fmt.Errorf("read string: %w", err)
+	}
+	name = name[:len(name)-1]
+
+	return name, nil
+}
+
+func readFileMode(r *bufio.Reader) (int, error) {
+	mode, err := r.ReadString(' ')
+	if errors.Is(err, io.EOF) {
+		return 0, err
+	}
+	if err != nil {
+		return 0, fmt.Errorf("read string: %w", err)
+	}
+	mode = mode[:len(mode)-1]
+
+	modeNum, err := strconv.Atoi(mode)
+	if err != nil {
+		return 0, fmt.Errorf("atoi mode: %w", err)
+	}
+	return modeNum, nil
+}
+
+type treeEntry struct {
+	object.GitObject
+	name string
+	mode int
+	hash object.Hash
+}
+
+func NewTreeEntry(gio object.GitObject, name string, mode int, sha []byte) *treeEntry {
+	return &treeEntry{
+		GitObject: gio,
+		name:      name,
+		mode:      mode,
+		hash:      object.Hash(sha[:]),
+	}
+}
+
+func (t *treeEntry) String() string {
+	var typ string
+	switch t.GitObject.(type) {
+	case *object.Object[object.Blob]:
+		typ = "blob"
+	case *object.Object[object.Tree]:
+		typ = "tree"
+	default:
+		return ""
+	}
+	return fmt.Sprintf("%06d %s %s    %s\n", t.mode, typ, t.hash, t.name)
 }
 
 func init() {
