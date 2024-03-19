@@ -139,9 +139,9 @@ type treeEntry struct {
 	hash object.Hash
 }
 
-func NewTreeEntry(gio object.GitObject, name string, mode int, sha []byte) *treeEntry {
+func NewTreeEntry(obj object.GitObject, name string, mode int, sha []byte) *treeEntry {
 	return &treeEntry{
-		GitObject: gio,
+		GitObject: obj,
 		name:      name,
 		mode:      mode,
 		hash:      object.Hash(sha[:]),
