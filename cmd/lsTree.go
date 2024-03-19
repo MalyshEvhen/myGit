@@ -149,16 +149,18 @@ func NewTreeEntry(gio object.GitObject, name string, mode int, sha []byte) *tree
 }
 
 func (t *treeEntry) String() string {
-	var typ string
+	var objType string
+
 	switch t.GitObject.(type) {
 	case *object.Object[object.Blob]:
-		typ = "blob"
+		objType = "blob"
 	case *object.Object[object.Tree]:
-		typ = "tree"
+		objType = "tree"
 	default:
 		return ""
 	}
-	return fmt.Sprintf("%06d %s %s    %s\n", t.mode, typ, t.hash, t.name)
+
+	return fmt.Sprintf("%06d %s %s    %s\n", t.mode, objType, t.hash, t.name)
 }
 
 func init() {
