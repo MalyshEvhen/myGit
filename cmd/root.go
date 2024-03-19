@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var objectHash string
+
 var rootCmd = &cobra.Command{
 	Use:   "mygit",
 	Short: "A brief description of your application",

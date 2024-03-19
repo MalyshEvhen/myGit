@@ -8,10 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	objectHash  string
-	prettyPrint bool
-)
+var prettyPrint bool
 
 var catFileCmd = &cobra.Command{
 	Use:   "cat-file",
@@ -50,7 +47,7 @@ func catFile() error {
 	case *object.Object[object.Blob]:
 		fmt.Printf("%s", obj.Content())
 	case *object.Object[object.Tree]:
-		fmt.Printf("tree %s\n", objectHash)
+		lsTree()
 	default:
 		fmt.Printf("unknown type of object: %v", obj)
 		os.Exit(1)
