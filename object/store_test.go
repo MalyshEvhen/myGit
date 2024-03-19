@@ -48,7 +48,7 @@ func TestStoreFromFileEdgeCases(t *testing.T) {
 
 	t.Run("large file", func(t *testing.T) {
 		data := make([]byte, 1024*1024)
-		err := os.WriteFile("large.txt", data, 0644)
+		err := os.WriteFile("./test_files/large.txt", data, 0644)
 		require.NoError(t, err)
 
 		hash, err := StoreFromFile("test_files/large.txt", "blob", dryRun)
