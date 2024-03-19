@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 )
 
-func StoreFromFile(name, typ string) (Hash, error) {
+func StoreFromFile(name, typ string, dryRun bool) (Hash, error) {
 	if !IsSupportedType(typ) {
 		return Hash{}, fmt.Errorf("invalid object type: %s", typ)
 	}
@@ -25,10 +25,10 @@ func StoreFromFile(name, typ string) (Hash, error) {
 	size := int64(len(content))
 	reader := bytes.NewReader(content)
 
-	return Store(reader, typ, size)
+	return Store(reader, typ, size, dryRun)
 }
 
-func Store(r io.Reader, typ string, size int64) (Hash, error) {
+func Store(r io.Reader, typ string, size int64, dryRun bool) (Hash, error) {
 	if !IsSupportedType(typ) {
 		return Hash{}, fmt.Errorf("invalid object type: %s", typ)
 	}
@@ -48,18 +48,27 @@ func Store(r io.Reader, typ string, size int64) (Hash, error) {
 	sum := sha1.Sum(buf.Bytes())
 	name := hex.EncodeToString(sum[:])
 
+	if !dryRun {
+		err = writeFile(name, fileContent)
+		if err != nil {
+			return Hash{}, err
+		}
+	}
+	return Hash(sum), nil
+}
+
+func writeFile(name string, fileContent bytes.Buffer) error {
 	objPath := filepath.Join(".git", "objects", name[:2], name[2:])
 	dirPath := filepath.Dir(objPath)
 
 	if err := os.MkdirAll(dirPath, 0755); err != nil {
-		return Hash{}, err
+		return fmt.Errorf("create dir: %w", err)
 	}
 
 	if err := os.WriteFile(objPath, fileContent.Bytes(), 0644); err != nil {
-		return Hash{}, err
+		return fmt.Errorf("write file: %w", err)
 	}
-
-	return Hash(sum), nil
+	return nil
 }
 
 func EncodeObject(dst io.Writer, src io.Reader, typ string, size int64) (int64, error) {

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/mygit/object"
 	"github.com/spf13/cobra"
@@ -28,12 +27,7 @@ func hashObjCmd(cmd *cobra.Command, args []string) {
 	} else {
 		filePath = args[0]
 
-		if !write {
-			fmt.Print("mode must be given without -w, and we don`t support it.")
-			os.Exit(1)
-		}
-
-		name, err := object.StoreFromFile(filePath, "blob")
+		name, err := object.StoreFromFile(filePath, "blob", !write)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		}

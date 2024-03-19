@@ -12,33 +12,36 @@ import (
 )
 
 func TestStoreFromFile(t *testing.T) {
+	dryRun := false
 
 	t.Run("valid file", func(t *testing.T) {
 		expectedHash, err := HashFromString("a5c19667710254f835085b99726e523457150e03")
 		assert.NoError(t, err)
 
-		hash, err := StoreFromFile("test_files/test.txt", "blob")
+		hash, err := StoreFromFile("test_files/test.txt", "blob", dryRun)
 
 		assert.NoError(t, err)
 		assert.Equal(t, expectedHash, hash)
 	})
 
 	t.Run("non-existing file", func(t *testing.T) {
-		_, err := StoreFromFile("invalid.txt", "blob")
+		_, err := StoreFromFile("invalid.txt", "blob", dryRun)
 
 		assert.Error(t, err)
 	})
 
 	t.Run("invalid type", func(t *testing.T) {
-		_, err := StoreFromFile("test_files/test.txt", "invalid")
+		_, err := StoreFromFile("test_files/test.txt", "invalid", dryRun)
 
 		assert.Error(t, err)
 	})
 }
+
 func TestStoreFromFileEdgeCases(t *testing.T) {
+	dryRun := false
 
 	t.Run("empty file", func(t *testing.T) {
-		hash, err := StoreFromFile("", "blob")
+		hash, err := StoreFromFile("", "blob", dryRun)
 		assert.Error(t, err)
 		assert.Equal(t, Hash{}, hash)
 	})
@@ -48,13 +51,13 @@ func TestStoreFromFileEdgeCases(t *testing.T) {
 		err := os.WriteFile("large.txt", data, 0644)
 		require.NoError(t, err)
 
-		hash, err := StoreFromFile("test_files/large.txt", "blob")
+		hash, err := StoreFromFile("test_files/large.txt", "blob", dryRun)
 		assert.NoError(t, err)
 		assert.NotEqual(t, Hash{}, hash)
 	})
 
 	t.Run("invalid object type", func(t *testing.T) {
-		hash, err := StoreFromFile("test_files/test.txt", "invalid")
+		hash, err := StoreFromFile("test_files/test.txt", "invalid", dryRun)
 		assert.Error(t, err)
 		assert.Equal(t, Hash{}, hash)
 	})
