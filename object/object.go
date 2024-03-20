@@ -10,18 +10,18 @@ import (
 	"strconv"
 )
 
-type GitObject interface {
+type Object interface {
 	String() string
 	Content() []byte
 	Size() int64
 }
 
-type Object[T ObjectType] struct {
+type GitObject[T GitObjectType] struct {
 	content []byte
 	size    int64
 }
 
-type ObjectType interface {
+type GitObjectType interface {
 	Commit | Tree | Blob | Tag
 }
 
@@ -30,19 +30,19 @@ type Tree string
 type Blob string
 type Tag string
 
-func (b *Object[T]) String() string {
+func (b *GitObject[T]) String() string {
 	return string(b.content)
 }
 
-func (b *Object[T]) Size() int64 {
+func (b *GitObject[T]) Size() int64 {
 	return b.size
 }
 
-func (b *Object[T]) Content() []byte {
+func (b *GitObject[T]) Content() []byte {
 	return b.content
 }
 
-func LoadByHash(h Hash) (GitObject, error) {
+func LoadByHash(h Hash) (Object, error) {
 	name := h.String()
 
 	path := filepath.Join(".git", "objects", name[:2], name[2:])
@@ -62,7 +62,7 @@ func LoadByHash(h Hash) (GitObject, error) {
 	return LoadFile(file)
 }
 
-func LoadFile(r io.Reader) (GitObject, error) {
+func LoadFile(r io.Reader) (Object, error) {
 	zr, err := zlib.NewReader(r)
 	if err != nil {
 		return nil, fmt.Errorf("new zlib reader %w", err)
@@ -82,15 +82,15 @@ func LoadFile(r io.Reader) (GitObject, error) {
 
 	switch typ {
 	case "blob":
-		return &Object[Blob]{content, int64(len(content))}, nil
+		return &GitObject[Blob]{content, int64(len(content))}, nil
 	case "tree":
-		return &Object[Tree]{content, int64(len(content))}, nil
+		return &GitObject[Tree]{content, int64(len(content))}, nil
 	default:
 		return nil, fmt.Errorf("unknown object type %s", typ)
 	}
 }
 
-func NewBlob(content []byte, i int64) Object[Blob] {
+func NewBlob(content []byte, i int64) GitObject[Blob] {
 	panic("unimplemented")
 }
 
