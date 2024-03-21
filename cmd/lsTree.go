@@ -3,12 +3,10 @@ package cmd
 import (
 	"bufio"
 	"bytes"
-	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 
 	"github.com/mygit/object"
 	"github.com/spf13/cobra"
@@ -42,15 +40,18 @@ func lsTree() error {
 		return fmt.Errorf("hash object: %w %v", err, objectHash)
 	}
 
-	obj, err := object.LoadByHash(hash)
+	obj, err := object.Read(hash)
 	if err != nil {
 		return fmt.Errorf("load object: %w", err)
+	}
+	if *obj.Kind() != object.Tree {
+		return fmt.Errorf("object `%s` is not a tree", string(*obj.Kind()))
 	}
 
 	r := bufio.NewReader(bytes.NewReader(obj.Content()))
 
 	for {
-		mode, err := readFileMode(r)
+		entry, err := object.LoadTreeEntry(r)
 		if errors.Is(err, io.EOF) {
 			break
 		}
@@ -58,66 +59,13 @@ func lsTree() error {
 			return err
 		}
 
-		name, err := readName(r)
-		if err != nil {
-			return err
-		}
-
 		if !nameOnly {
-			sha, err := readSha(r)
-			if err != nil {
-				return err
-			}
-
-			entry, err := object.NewTreeEntry(name, mode,object.Hash(sha[:]))
-			if err != nil {
-				return err
-			}
 			fmt.Printf("%s", entry)
 		} else {
-			if _, err := r.Discard(sha1.Size); err != nil {
-				return fmt.Errorf("discard sha: %w", err)
-			}
-			fmt.Println(name)
+			fmt.Println(entry.Name())
 		}
 	}
 	return nil
-}
-
-func readSha(r *bufio.Reader) ([]byte, error) {
-	sha := make([]byte, sha1.Size)
-	_, err := r.Read(sha)
-	if err != nil {
-		return nil, fmt.Errorf("read sha: %w", err)
-	}
-	return sha, nil
-}
-
-func readName(r *bufio.Reader) (string, error) {
-	name, err := r.ReadString('\000')
-	if err != nil {
-		return "", fmt.Errorf("read string: %w", err)
-	}
-	name = name[:len(name)-1]
-
-	return name, nil
-}
-
-func readFileMode(r *bufio.Reader) (int, error) {
-	mode, err := r.ReadString(' ')
-	if errors.Is(err, io.EOF) {
-		return 0, err
-	}
-	if err != nil {
-		return 0, fmt.Errorf("read string: %w", err)
-	}
-	mode = mode[:len(mode)-1]
-
-	modeNum, err := strconv.Atoi(mode)
-	if err != nil {
-		return 0, fmt.Errorf("atoi mode: %w", err)
-	}
-	return modeNum, nil
 }
 
 func init() {

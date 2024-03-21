@@ -80,13 +80,12 @@ func EncodeObject(dst io.Writer, src io.Reader, typ string, size int64) (int64, 
 		return 0, fmt.Errorf("invalid size: %d", size)
 	}
 
-	_, encodeErr := fmt.Fprintf(dst, "%v %d\000", typ, size)
-	if encodeErr != nil {
-		return 0, encodeErr
+	_, err := fmt.Fprintf(dst, "%v %d\000", typ, size)
+	if err != nil {
+		return 0, err
 	}
 
 	var bytesWritten int64
-	var err error
 	if s, ok := src.(io.WriterTo); ok {
 		bytesWritten, err = s.WriteTo(dst)
 	} else {
@@ -130,6 +129,16 @@ func Compress(w io.Writer, data []byte) error {
 	}
 
 	return zw.Close()
+}
+
+func Decompress(r io.Reader) (io.ReadCloser, error) {
+	zr, err := zlib.NewReader(r)
+	if err != nil {
+		return nil, fmt.Errorf("new zlib reader %w", err)
+	}
+	defer zr.Close()
+
+	return zr, nil
 }
 
 func IsSupportedType(typ string) bool {
