@@ -9,8 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-
-	"github.com/magiconair/properties/assert"
 )
 
 type Object struct {
@@ -66,7 +64,6 @@ func (o *Object) String() string {
 
 func LoadObject(h Hash) (*Object, error) {
 	name := h.String()
-
 	path := filepath.Join(".git", "objects", name[:2], name[2:])
 
 	file, err := os.Open(path)
@@ -80,9 +77,35 @@ func LoadObject(h Hash) (*Object, error) {
 		return nil, err
 	}
 
-	kind, content, err := parse(zr)
+	return ReadObject(zr)
+}
+
+func ReadObject(r io.Reader) (*Object, error) {
+	br := bufio.NewReader(r)
+
+	kind, err := br.ReadString(' ')
 	if err != nil {
-		return nil, fmt.Errorf("parse object %w", err)
+		return nil, err
+	}
+
+	kind = kind[:len(kind)-1]
+
+	sizeStr, err := br.ReadString('\000')
+	if err != nil {
+		return nil, err
+	}
+
+	sizeStr = sizeStr[:len(sizeStr)-1]
+
+	size, err := strconv.ParseInt(sizeStr, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("parse size: %w", err)
+	}
+
+	content := make([]byte, size)
+
+	if _, err := io.ReadFull(br, content); err != nil {
+		return nil, fmt.Errorf("read content: %w", err)
 	}
 
 	return NewGitObject(kind, int64(len(content)), content)
@@ -108,7 +131,7 @@ func NewTreeEntry(o *Object, name string, mode int, hash Hash) *TreeEntry {
 	}
 }
 
-func LoadTreeEntry(r *bufio.Reader) (*TreeEntry, error) {
+func ReadTreeEntry(r *bufio.Reader) (*TreeEntry, error) {
 	mode, err := readFileMode(r)
 	if err != nil {
 		return nil, err
@@ -171,35 +194,4 @@ func readFileMode(r *bufio.Reader) (int, error) {
 		return 0, fmt.Errorf("atoi mode: %w", err)
 	}
 	return modeNum, nil
-}
-
-func parse(r io.Reader) (string, []byte, error) {
-	br := bufio.NewReader(r)
-
-	typ, err := br.ReadString(' ')
-	if err != nil {
-		return "", nil, err
-	}
-
-	typ = typ[:len(typ)-1]
-
-	sizeStr, err := br.ReadString('\000')
-	if err != nil {
-		return typ, nil, err
-	}
-
-	sizeStr = sizeStr[:len(sizeStr)-1]
-
-	size, err := strconv.ParseInt(sizeStr, 10, 64)
-	if err != nil {
-		return "", nil, fmt.Errorf("parse size: %w", err)
-	}
-
-	content := make([]byte, size)
-
-	if _, err := io.ReadFull(br, content); err != nil {
-		return "", nil, fmt.Errorf("read content: %w", err)
-	}
-
-	return typ, content, nil
 }

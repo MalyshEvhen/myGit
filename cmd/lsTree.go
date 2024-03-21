@@ -51,7 +51,7 @@ func lsTree() error {
 	r := bufio.NewReader(bytes.NewReader(obj.Content()))
 
 	for {
-		entry, err := object.LoadTreeEntry(r)
+		entry, err := object.ReadTreeEntry(r)
 		if errors.Is(err, io.EOF) {
 			break
 		}
