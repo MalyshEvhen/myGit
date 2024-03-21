@@ -43,10 +43,10 @@ func catFile() error {
 	if err != nil {
 		return fmt.Errorf("load object: %w", err)
 	}
-	switch obj.(type) {
-	case *object.GitObject[object.Blob]:
+	switch *obj.Type() {
+	case object.Blob:
 		fmt.Printf("%s", obj.Content())
-	case *object.GitObject[object.Tree]:
+	case object.Tree:
 		lsTree()
 	default:
 		fmt.Printf("unknown type of object: %v", obj)

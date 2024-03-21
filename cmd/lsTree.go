@@ -86,7 +86,7 @@ func lsTree() error {
 	return nil
 }
 
-func readNestedObject(sha []byte) (object.Object, error) {
+func readNestedObject(sha []byte) (*object.GitObject, error) {
 	hash := object.Hash(sha[:])
 	obj, err := object.LoadByHash(hash)
 	if err != nil {
@@ -133,34 +133,26 @@ func readFileMode(r *bufio.Reader) (int, error) {
 }
 
 type treeEntry struct {
-	object.Object
+	*object.GitObject
 	name string
 	mode int
 	hash object.Hash
 }
 
-func NewTreeEntry(obj object.Object, name string, mode int, sha []byte) *treeEntry {
+func NewTreeEntry(obj *object.GitObject, name string, mode int, sha []byte) *treeEntry {
 	return &treeEntry{
-		Object: obj,
-		name:   name,
-		mode:   mode,
-		hash:   object.Hash(sha[:]),
+		GitObject: obj,
+		name:      name,
+		mode:      mode,
+		hash:      object.Hash(sha[:]),
 	}
 }
 
 func (t *treeEntry) String() string {
-	var objType string
+	objType := t.GitObject.Type()
+	objTypeValue := string(*objType)
 
-	switch t.Object.(type) {
-	case *object.GitObject[object.Blob]:
-		objType = "blob"
-	case *object.GitObject[object.Tree]:
-		objType = "tree"
-	default:
-		return ""
-	}
-
-	return fmt.Sprintf("%06d %s %s    %s\n", t.mode, objType, t.hash, t.name)
+	return fmt.Sprintf("%06d %s %s    %s\n", t.mode, objTypeValue, t.hash, t.name)
 }
 
 func init() {

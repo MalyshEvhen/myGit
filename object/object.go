@@ -10,39 +10,53 @@ import (
 	"strconv"
 )
 
-type Object interface {
-	String() string
-	Content() []byte
-	Size() int64
-}
-
-type GitObject[T GitObjectType] struct {
-	content []byte
+type GitObject struct {
+	objType GitObjectType
 	size    int64
+	content []byte
 }
 
-type GitObjectType interface {
-	Commit | Tree | Blob | Tag
+type GitObjectType string
+
+const (
+	Commit GitObjectType = "commit"
+	Tree   GitObjectType = "tree"
+	Blob   GitObjectType = "blob"
+)
+
+func NewGitObject(typ string, size int64, content []byte) (*GitObject, error) {
+	var objType GitObjectType
+	switch typ {
+	case string(Commit):
+		objType = Commit
+	case string(Tree):
+		objType = Tree
+	case string(Blob):
+		objType = Blob
+	default:
+		return nil, fmt.Errorf("unsupported git object type: %s", typ)
+	}
+
+	return &GitObject{objType, size, content}, nil
 }
 
-type Commit string
-type Tree string
-type Blob string
-type Tag string
-
-func (b *GitObject[T]) String() string {
-	return string(b.content)
+func (b *GitObject) Type() *GitObjectType {
+	return &b.objType
 }
 
-func (b *GitObject[T]) Size() int64 {
+func (b *GitObject) Size() int64 {
 	return b.size
 }
 
-func (b *GitObject[T]) Content() []byte {
+func (b *GitObject) Content() []byte {
 	return b.content
 }
 
-func LoadByHash(h Hash) (Object, error) {
+func (b *GitObject) String() string {
+	return string(b.content)
+}
+
+func LoadByHash(h Hash) (*GitObject, error) {
 	name := h.String()
 
 	path := filepath.Join(".git", "objects", name[:2], name[2:])
@@ -51,50 +65,32 @@ func LoadByHash(h Hash) (Object, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
+	defer file.Close()
 
-	defer func() {
-		e := file.Close()
-		if err == nil && e != nil {
-			err = fmt.Errorf("close file: %w", e)
-		}
-	}()
-
-	return LoadFile(file)
-}
-
-func LoadFile(r io.Reader) (Object, error) {
-	zr, err := zlib.NewReader(r)
+	zr, err := Decompress(file)
 	if err != nil {
-		return nil, fmt.Errorf("new zlib reader %w", err)
+		return nil, err
 	}
 
-	defer func() {
-		e := zr.Close()
-		if err == nil && e != nil {
-			err = fmt.Errorf("close zlib reader: %w", e)
-		}
-	}()
-
-	typ, content, err := parseObject(zr)
+	typ, content, err := parse(zr)
 	if err != nil {
 		return nil, fmt.Errorf("parse object %w", err)
 	}
 
-	switch typ {
-	case "blob":
-		return &GitObject[Blob]{content, int64(len(content))}, nil
-	case "tree":
-		return &GitObject[Tree]{content, int64(len(content))}, nil
-	default:
-		return nil, fmt.Errorf("unknown object type %s", typ)
+	return NewGitObject(typ, int64(len(content)), content)
+}
+
+func Decompress(r io.Reader) (io.ReadCloser, error) {
+	zr, err := zlib.NewReader(r)
+	if err != nil {
+		return nil, fmt.Errorf("new zlib reader %w", err)
 	}
+	defer zr.Close()
+
+	return zr, nil
 }
 
-func NewBlob(content []byte, i int64) GitObject[Blob] {
-	panic("unimplemented")
-}
-
-func parseObject(r io.Reader) (string, []byte, error) {
+func parse(r io.Reader) (string, []byte, error) {
 	br := bufio.NewReader(r)
 
 	typ, err := br.ReadString(' ')
