@@ -62,7 +62,7 @@ func (o *Object) String() string {
 	return string(o.content)
 }
 
-func Read(h Hash) (*Object, error) {
+func LoadObject(h Hash) (*Object, error) {
 	name := h.String()
 
 	path := filepath.Join(".git", "objects", name[:2], name[2:])
@@ -114,7 +114,7 @@ func LoadTreeEntry(r *bufio.Reader) (*TreeEntry, error) {
 	}
 	hash := Hash(sha[:])
 
-	obj, err := Read(hash)
+	obj, err := LoadObject(hash)
 	if err != nil {
 		return nil, fmt.Errorf("load tree entry by hash: %s %w", hash, err)
 	}

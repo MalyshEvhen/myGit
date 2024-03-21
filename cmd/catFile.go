@@ -39,7 +39,7 @@ func catFile() error {
 		return fmt.Errorf("hash object: %w, %v", err, objectHash)
 	}
 
-	obj, err := object.Read(hash)
+	obj, err := object.LoadObject(hash)
 	if err != nil {
 		return fmt.Errorf("load object: %w", err)
 	}
