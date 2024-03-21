@@ -26,8 +26,11 @@ func hashObjCmd(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	} else {
 		filePath = args[0]
-
-		hash, err := object.StoreFromFile(filePath, "blob", !write)
+		r, size, err := object.ReadFromFile(filePath, "blob")
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+		}
+		hash, err := object.Store(r, "blob", size, !write)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		}

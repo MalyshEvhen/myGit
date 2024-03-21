@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strconv"
 )
 
@@ -37,7 +35,7 @@ func (k Kind) String() string {
 	return ""
 }
 
-func NewGitObject(kind string, size int64, content []byte) (*Object, error) {
+func NewObject(kind string, size int64, content []byte) (*Object, error) {
 	objKind := Kind(kind)
 	if objKind != Commit && objKind != Tree && objKind != Blob {
 		return nil, fmt.Errorf("unsupported git object type: %s", kind)
@@ -60,24 +58,6 @@ func (o *Object) Content() []byte {
 
 func (o *Object) String() string {
 	return string(o.content)
-}
-
-func LoadObject(h Hash) (*Object, error) {
-	name := h.String()
-	path := filepath.Join(".git", "objects", name[:2], name[2:])
-
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("read file: %w", err)
-	}
-	defer file.Close()
-
-	zr, err := Decompress(file)
-	if err != nil {
-		return nil, err
-	}
-
-	return ReadObject(zr)
 }
 
 func ReadObject(r io.Reader) (*Object, error) {
@@ -108,7 +88,7 @@ func ReadObject(r io.Reader) (*Object, error) {
 		return nil, fmt.Errorf("read content: %w", err)
 	}
 
-	return NewGitObject(kind, int64(len(content)), content)
+	return NewObject(kind, int64(len(content)), content)
 }
 
 type TreeEntry struct {
@@ -118,10 +98,6 @@ type TreeEntry struct {
 	hash Hash
 }
 
-func (e *TreeEntry) Name() string {
-	return e.name
-}
-
 func NewTreeEntry(o *Object, name string, mode int, hash Hash) *TreeEntry {
 	return &TreeEntry{
 		Object: o,
@@ -129,6 +105,14 @@ func NewTreeEntry(o *Object, name string, mode int, hash Hash) *TreeEntry {
 		mode:   mode,
 		hash:   hash,
 	}
+}
+
+func (e *TreeEntry) Name() string {
+	return e.name
+}
+
+func (t *TreeEntry) String() string {
+	return fmt.Sprintf("%06d %s %s    %s\n", t.mode, t.Object.Kind(), t.hash, t.name)
 }
 
 func ReadTreeEntry(r *bufio.Reader) (*TreeEntry, error) {
@@ -148,16 +132,18 @@ func ReadTreeEntry(r *bufio.Reader) (*TreeEntry, error) {
 	}
 	hash := Hash(sha[:])
 
-	obj, err := LoadObject(hash)
+	rc, err := LoadFileByHash(hash)
 	if err != nil {
 		return nil, fmt.Errorf("load tree entry by hash: %s %w", hash, err)
 	}
+	defer rc.Close()
+
+	obj, err := ReadObject(rc)
+	if err != nil {
+		return nil, err
+	}
 
 	return NewTreeEntry(obj, name, mode, hash), nil
-}
-
-func (t *TreeEntry) String() string {
-	return fmt.Sprintf("%06d %s %s    %s\n", t.mode, t.Object.Kind(), t.hash, t.name)
 }
 
 func readSha(r *bufio.Reader) ([]byte, error) {

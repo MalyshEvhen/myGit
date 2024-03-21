@@ -39,10 +39,17 @@ func catFile() error {
 		return fmt.Errorf("hash object: %w, %v", err, objectHash)
 	}
 
-	obj, err := object.LoadObject(hash)
+	rc, err := object.LoadFileByHash(hash)
 	if err != nil {
-		return fmt.Errorf("load object: %w", err)
+		return err
 	}
+	defer rc.Close()
+
+	obj, err := object.ReadObject(rc)
+	if err != nil {
+		return err
+	}
+
 	switch *obj.Kind() {
 	case object.Blob:
 		fmt.Printf("%s", obj.Content())

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/zlib"
 	"crypto/sha1"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -12,30 +11,30 @@ import (
 	"path/filepath"
 )
 
-func StoreFromFile(name, typ string, dryRun bool) (Hash, error) {
+func ReadFromFile(name string, typ Kind) (io.Reader, int64, error) {
 	if !IsSupportedType(typ) {
-		return Hash{}, fmt.Errorf("invalid object type: %s", typ)
+		return nil, 0, fmt.Errorf("invalid object type: %s", typ)
 	}
 
 	content, err := os.ReadFile(name)
 	if err != nil {
-		return Hash{}, err
+		return nil, 0, err
 	}
 
 	size := int64(len(content))
 	reader := bytes.NewReader(content)
 
-	return Store(reader, typ, size, dryRun)
+	return reader, size, nil
 }
 
-func Store(r io.Reader, typ string, size int64, dryRun bool) (Hash, error) {
-	if !IsSupportedType(typ) {
-		return Hash{}, fmt.Errorf("invalid object type: %s", typ)
+func Store(r io.Reader, kind Kind, size int64, dryRun bool) (Hash, error) {
+	if !IsSupportedType(kind) {
+		return Hash{}, fmt.Errorf("invalid object type: %s", kind)
 	}
 
 	var buf bytes.Buffer
 
-	if _, err := EncodeObject(&buf, r, typ, size); err != nil {
+	if _, err := EncodeObject(&buf, r, kind, size); err != nil {
 		return Hash{}, err
 	}
 
@@ -46,41 +45,58 @@ func Store(r io.Reader, typ string, size int64, dryRun bool) (Hash, error) {
 	}
 
 	sum := sha1.Sum(buf.Bytes())
-	name := hex.EncodeToString(sum[:])
+	hash := Hash(sum)
 
 	if !dryRun {
-		err = writeFile(name, fileContent)
+		err = WriteFile(hash, fileContent)
 		if err != nil {
 			return Hash{}, err
 		}
 	}
-	return Hash(sum), nil
+	return hash, nil
 }
 
-func writeFile(name string, fileContent bytes.Buffer) error {
-	objPath := filepath.Join(".git", "objects", name[:2], name[2:])
+func LoadFileByHash(hash Hash) (io.ReadCloser, error) {
+	path := MakeObjectPath(hash)
+
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("read file: %w", err)
+	}
+	defer file.Close()
+
+	return Decompress(file)
+}
+
+func WriteFile(hash Hash, content bytes.Buffer) error {
+	objPath := MakeObjectPath(hash)
 	dirPath := filepath.Dir(objPath)
 
 	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		return fmt.Errorf("create dir: %w", err)
 	}
 
-	if err := os.WriteFile(objPath, fileContent.Bytes(), 0644); err != nil {
+	if err := os.WriteFile(objPath, content.Bytes(), 0644); err != nil {
 		return fmt.Errorf("write file: %w", err)
 	}
 	return nil
 }
 
-func EncodeObject(dst io.Writer, src io.Reader, typ string, size int64) (int64, error) {
-	if !IsSupportedType(typ) {
-		return 0, fmt.Errorf("invalid object type: %s", typ)
+func MakeObjectPath(hash Hash) string {
+	name := hash.String()
+	return filepath.Join(".git", "objects", name[:2], name[2:])
+}
+
+func EncodeObject(dst io.Writer, src io.Reader, kind Kind, size int64) (int64, error) {
+	if !IsSupportedType(kind) {
+		return 0, fmt.Errorf("invalid object type: %s", kind)
 	}
 
 	if size < 0 {
 		return 0, fmt.Errorf("invalid size: %d", size)
 	}
 
-	_, err := fmt.Fprintf(dst, "%v %d\000", typ, size)
+	_, err := fmt.Fprintf(dst, "%v %d\000", kind, size)
 	if err != nil {
 		return 0, err
 	}
@@ -141,6 +157,6 @@ func Decompress(r io.Reader) (io.ReadCloser, error) {
 	return zr, nil
 }
 
-func IsSupportedType(typ string) bool {
-	return typ == "blob" || typ == "tree"
+func IsSupportedType(kind Kind) bool {
+	return kind == "blob" || kind == "tree"
 }

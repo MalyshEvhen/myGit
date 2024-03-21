@@ -40,9 +40,15 @@ func lsTree() error {
 		return fmt.Errorf("hash object: %w %v", err, objectHash)
 	}
 
-	obj, err := object.LoadObject(hash)
+	rc, err := object.LoadFileByHash(hash)
 	if err != nil {
 		return fmt.Errorf("load object: %w", err)
+	}
+	defer rc.Close()
+
+	obj, err := object.ReadObject(rc)
+	if err != nil {
+		return err
 	}
 	if *obj.Kind() != object.Tree {
 		return fmt.Errorf("object `%s` is not a tree", string(*obj.Kind()))
