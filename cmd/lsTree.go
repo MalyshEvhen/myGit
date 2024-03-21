@@ -64,17 +64,15 @@ func lsTree() error {
 		}
 
 		if !nameOnly {
-			sha, err := readObjSha(r)
+			sha, err := readSha(r)
 			if err != nil {
 				return err
 			}
 
-			nestedObj, err := readNestedObject(sha)
+			entry, err := object.NewTreeEntry(name, mode,object.Hash(sha[:]))
 			if err != nil {
 				return err
 			}
-
-			entry := object.NewTreeEntry(nestedObj, name, mode, sha)
 			fmt.Printf("%s", entry)
 		} else {
 			if _, err := r.Discard(sha1.Size); err != nil {
@@ -86,17 +84,7 @@ func lsTree() error {
 	return nil
 }
 
-func readNestedObject(sha []byte) (*object.GitObject, error) {
-	hash := object.Hash(sha[:])
-	obj, err := object.LoadByHash(hash)
-	if err != nil {
-		return nil, fmt.Errorf("load object: %w", err)
-	}
-
-	return obj, nil
-}
-
-func readObjSha(r *bufio.Reader) ([]byte, error) {
+func readSha(r *bufio.Reader) ([]byte, error) {
 	sha := make([]byte, sha1.Size)
 	_, err := r.Read(sha)
 	if err != nil {

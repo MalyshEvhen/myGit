@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"compress/zlib"
 	"fmt"
+	"hash"
 	"io"
 	"os"
 	"path/filepath"
@@ -87,13 +88,17 @@ type TreeEntry struct {
 	hash Hash
 }
 
-func NewTreeEntry(obj *GitObject, name string, mode int, sha []byte) *TreeEntry {
+func NewTreeEntry(name string, mode int, hash Hash) (*TreeEntry, error) {
+	obj, err := LoadByHash(hash)
+	if err != nil {
+		return nil, fmt.Errorf("load tree entry by hash: %s %w", hash, err)
+	}
 	return &TreeEntry{
 		GitObject: obj,
 		name:      name,
 		mode:      mode,
-		hash:      Hash(sha[:]),
-	}
+		hash:      hash,
+	}, nil
 }
 
 func (t *TreeEntry) String() string {
