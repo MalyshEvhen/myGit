@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/magiconair/properties/assert"
 )
 
 type Object struct {
@@ -97,6 +99,15 @@ func (e *TreeEntry) Name() string {
 	return e.name
 }
 
+func NewTreeEntry(o *Object, name string, mode int, hash Hash) *TreeEntry {
+	return &TreeEntry{
+		Object: o,
+		name:   name,
+		mode:   mode,
+		hash:   hash,
+	}
+}
+
 func LoadTreeEntry(r *bufio.Reader) (*TreeEntry, error) {
 	mode, err := readFileMode(r)
 	if err != nil {
@@ -119,12 +130,7 @@ func LoadTreeEntry(r *bufio.Reader) (*TreeEntry, error) {
 		return nil, fmt.Errorf("load tree entry by hash: %s %w", hash, err)
 	}
 
-	return &TreeEntry{
-		Object: obj,
-		name:      name,
-		mode:      mode,
-		hash:      hash,
-	}, nil
+	return NewTreeEntry(obj, name, mode, hash), nil
 }
 
 func (t *TreeEntry) String() string {
