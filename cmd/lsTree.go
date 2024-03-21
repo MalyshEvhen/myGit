@@ -74,7 +74,7 @@ func lsTree() error {
 				return err
 			}
 
-			entry := NewTreeEntry(nestedObj, name, mode, sha)
+			entry := object.NewTreeEntry(nestedObj, name, mode, sha)
 			fmt.Printf("%s", entry)
 		} else {
 			if _, err := r.Discard(sha1.Size); err != nil {
@@ -130,29 +130,6 @@ func readFileMode(r *bufio.Reader) (int, error) {
 		return 0, fmt.Errorf("atoi mode: %w", err)
 	}
 	return modeNum, nil
-}
-
-type treeEntry struct {
-	*object.GitObject
-	name string
-	mode int
-	hash object.Hash
-}
-
-func NewTreeEntry(obj *object.GitObject, name string, mode int, sha []byte) *treeEntry {
-	return &treeEntry{
-		GitObject: obj,
-		name:      name,
-		mode:      mode,
-		hash:      object.Hash(sha[:]),
-	}
-}
-
-func (t *treeEntry) String() string {
-	objType := t.GitObject.Type()
-	objTypeValue := string(*objType)
-
-	return fmt.Sprintf("%06d %s %s    %s\n", t.mode, objTypeValue, t.hash, t.name)
 }
 
 func init() {

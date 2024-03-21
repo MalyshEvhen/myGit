@@ -40,20 +40,20 @@ func NewGitObject(typ string, size int64, content []byte) (*GitObject, error) {
 	return &GitObject{objType, size, content}, nil
 }
 
-func (b *GitObject) Type() *GitObjectType {
-	return &b.objType
+func (o *GitObject) Type() *GitObjectType {
+	return &o.objType
 }
 
-func (b *GitObject) Size() int64 {
-	return b.size
+func (o *GitObject) Size() int64 {
+	return o.size
 }
 
-func (b *GitObject) Content() []byte {
-	return b.content
+func (o *GitObject) Content() []byte {
+	return o.content
 }
 
-func (b *GitObject) String() string {
-	return string(b.content)
+func (o *GitObject) String() string {
+	return string(o.content)
 }
 
 func LoadByHash(h Hash) (*GitObject, error) {
@@ -78,6 +78,29 @@ func LoadByHash(h Hash) (*GitObject, error) {
 	}
 
 	return NewGitObject(typ, int64(len(content)), content)
+}
+
+type TreeEntry struct {
+	*GitObject
+	name string
+	mode int
+	hash Hash
+}
+
+func NewTreeEntry(obj *GitObject, name string, mode int, sha []byte) *TreeEntry {
+	return &TreeEntry{
+		GitObject: obj,
+		name:      name,
+		mode:      mode,
+		hash:      Hash(sha[:]),
+	}
+}
+
+func (t *TreeEntry) String() string {
+	objType := t.GitObject.Type()
+	objTypeValue := string(*objType)
+
+	return fmt.Sprintf("%06d %s %s    %s\n", t.mode, objTypeValue, t.hash, t.name)
 }
 
 func Decompress(r io.Reader) (io.ReadCloser, error) {
