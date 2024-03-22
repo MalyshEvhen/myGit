@@ -30,6 +30,7 @@ func init() {
 	rootCmd.AddCommand(hashObjectCmd)
 	rootCmd.AddCommand(lsTreeCmd)
 	rootCmd.AddCommand(writeTreeCmd)
+	rootCmd.AddCommand(commitTreeCmd)
 
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
