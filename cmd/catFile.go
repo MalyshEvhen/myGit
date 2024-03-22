@@ -28,6 +28,7 @@ var catFileCmd = &cobra.Command{
 			}
 			if err := catFile(); err != nil {
 				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
 			}
 		}
 	},
@@ -56,8 +57,7 @@ func catFile() error {
 	case object.Tree:
 		lsTree()
 	default:
-		fmt.Printf("unknown type of object: %v", obj)
-		os.Exit(1)
+		return fmt.Errorf("unknown type of object: %v", obj)
 	}
 	return nil
 }
