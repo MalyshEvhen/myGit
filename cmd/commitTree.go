@@ -60,8 +60,6 @@ func CommitTreeCmd(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Println(hash)
-
-	fmt.Println("commitTree called")
 }
 
 func printErrAndExit() {
